@@ -11,9 +11,15 @@ public class PlayerMovementManager : MonoBehaviour
 		public float _clampMin = -10f;
 		public float _clampMax = 15f;
 
-		public Transform gun;
+		public Transform _gun;
+		public Rigidbody _projectile;
+		public float _fireRate = .5f;
+		public float _projectileVelocity = 30f;
 		public float _moveSpeed;
 		public float _lookSpeed;
+
+		private Transform _barrel;
+		private bool _canFire = true;
 
 		private PlayerControls _controls;
     private Vector2 _movementAxis;
@@ -23,6 +29,7 @@ public class PlayerMovementManager : MonoBehaviour
     private void OnEnable()
     {
     	_controls = new PlayerControls();
+    	_barrel = _gun.Find("Barrel");
     	_controls.Player.Move.performed += HandleMovement;
     	_controls.Player.Move.Enable();
     	_controls.Player.Look.performed += HandleLook;
@@ -48,7 +55,7 @@ public class PlayerMovementManager : MonoBehaviour
     		transform.position += _movementAxis.x * Time.deltaTime * _moveSpeed * Vector3.ProjectOnPlane(_camera.transform.right, Vector3.up);
     		transform.position += _movementAxis.y * Time.deltaTime * _moveSpeed * Vector3.ProjectOnPlane(_camera.transform.forward, Vector3.up);
 
-    		// Necessary as action only triggered on press
+    		// Necessary for kb as action only triggered on press
     		_movementAxis = Vector2.zero;
     	}
     }
@@ -68,7 +75,7 @@ public class PlayerMovementManager : MonoBehaviour
     	_camera.transform.localRotation = Quaternion.Euler(_lookRot.x * _lookSpeed, 0, 0);
 
     	// Adjust angle of gun object
-    	gun.up = _camera.transform.forward;
+    	_gun.up = _camera.transform.forward;
     }
 
   	private void HandleActionButtons(InputAction.CallbackContext c)
@@ -84,9 +91,24 @@ public class PlayerMovementManager : MonoBehaviour
     		case "buttonSouth":
     			GetComponent<Rigidbody>().AddForce(transform.up * 100f);
     			break;
+    		case "leftCtrl":
+    			if (_canFire)
+    			{
+    				Rigidbody proj = Instantiate(_projectile, _barrel.position, _barrel.rotation);
+    				proj.velocity = _barrel.TransformDirection(Vector3.forward * _projectileVelocity);
+    				StartCoroutine(DisableShooting());
+    			}
+    			break;
     		default:
     			Debug.Log(key);
     			break;
     	}
+  	}
+
+  	private IEnumerator DisableShooting()
+  	{
+    	_canFire = false;
+  		yield return new WaitForSeconds(_fireRate);
+  		_canFire = true;
   	}
 }
